@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/sirkitboard/wardrowbe
+  IMAGE_PREFIX: ghcr.io/anyesh/wardrowbe
 
 jobs:
   build-and-push:
