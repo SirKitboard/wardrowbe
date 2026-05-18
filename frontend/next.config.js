@@ -5,6 +5,15 @@ const nextConfig = {
     // Disable automatic static optimization for pages using client-side context
     missingSuspenseWithCSRBailout: false,
   },
+  async rewrites() {
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://wardrowbe-backend:8000';
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${backendUrl}/api/v1/:path*`,
+      },
+    ];
+  },
   images: {
     unoptimized: true,
   },
@@ -14,16 +23,6 @@ const nextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
-  },
-  async rewrites() {
-    // Use backend hostname for server-side requests (Docker network)
-    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:8000';
-    return [
-      {
-        source: '/api/v1/:path*',
-        destination: `${backendUrl}/api/v1/:path*`,
-      },
-    ];
   },
 };
 
