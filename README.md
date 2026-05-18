@@ -120,6 +120,12 @@ cp .env.example .env
 #   AI_API_KEY=sk-your-api-key-here
 #   AI_VISION_MODEL=gpt-4o
 #   AI_TEXT_MODEL=gpt-4o
+#
+# For Gemini, uncomment and set:
+#   AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+#   AI_API_KEY=your-gemini-api-key
+#   AI_VISION_MODEL=gemini-3-flash-preview
+#   AI_TEXT_MODEL=gemini-3-flash-preview
 
 # Optional: Generate secure secrets for production
 # SECRET_KEY=$(openssl rand -hex 32)
@@ -206,6 +212,19 @@ Wardrowbe works with any OpenAI-compatible API. You need two types of models:
    AI_API_KEY=sk-your-api-key-here
    AI_VISION_MODEL=gpt-4o
    AI_TEXT_MODEL=gpt-4o
+   ```
+
+### Using Google Gemini
+
+**Paid API, requires internet connection**
+
+1. Get an API key from https://aistudio.google.com/app/apikey
+2. Configure in `.env`:
+   ```env
+   AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+   AI_API_KEY=your-gemini-api-key
+   AI_VISION_MODEL=gemini-3-flash-preview
+   AI_TEXT_MODEL=gemini-3-flash-preview
    ```
 
 ### Using LocalAI

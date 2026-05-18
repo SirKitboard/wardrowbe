@@ -448,13 +448,14 @@ class AIService:
             async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
                 for attempt in range(self.settings.ai_max_retries):
                     try:
-                        request_body = {
+                        request_body: dict = {
                             "model": model,
                             "messages": messages,
                             "stream": False,
                             "max_tokens": self.settings.ai_max_tokens,
                         }
-                        if request_logprobs:
+                        use_logprobs = request_logprobs
+                        if use_logprobs:
                             request_body["logprobs"] = True
                             request_body["top_logprobs"] = 3
 
@@ -463,13 +464,29 @@ class AIService:
                             headers=self._get_headers(),
                             json=request_body,
                         )
+
+                        # Some providers (e.g. Gemini) don't support logprobs and return 400.
+                        # Retry once without them rather than burning all attempts.
+                        if response.status_code == 400 and use_logprobs:
+                            request_body.pop("logprobs", None)
+                            request_body.pop("top_logprobs", None)
+                            use_logprobs = False
+                            logger.debug(
+                                f"Provider {endpoint.name} rejected logprobs, retrying without"
+                            )
+                            response = await client.post(
+                                f"{endpoint.url}/chat/completions",
+                                headers=self._get_headers(),
+                                json=request_body,
+                            )
+
                         response.raise_for_status()
 
                         data = response.json()
                         choice = data["choices"][0]
                         content = choice["message"]["content"]
                         logprobs_content = None
-                        if request_logprobs:
+                        if use_logprobs:
                             lp = choice.get("logprobs")
                             if lp:
                                 logprobs_content = lp.get("content")
