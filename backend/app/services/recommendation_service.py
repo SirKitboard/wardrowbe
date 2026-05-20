@@ -1,8 +1,6 @@
 import json
 import logging
 import re
-
-import httpx
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
@@ -806,34 +804,8 @@ class RecommendationService:
                     scheduled_date=scheduled_date,
                 )
 
-            # Multi-outfit parse — fall back to single-outfit if the response is
-            # truncated or otherwise unparseable (e.g. model hit its output token limit)
-            try:
-                outfit_list = self._parse_multi_outfit_response(result.content)
-            except ValueError as parse_err:
-                logger.warning(
-                    f"Multi-outfit parse failed ({parse_err}), retrying as single-outfit. "
-                    f"Full response:\n{result.content}"
-                )
-                single_prompt = re.sub(
-                    r"Respond with valid JSON containing exactly 3.*$",
-                    SINGLE_OUTFIT_FORMAT,
-                    prompt,
-                    flags=re.DOTALL,
-                )
-                fallback = await ai_service.generate_text(single_prompt, return_metadata=True)
-                logger.debug(f"Single-outfit fallback response:\n{fallback.content}")
-                outfit_data = self._parse_ai_response(fallback.content)
-                if isinstance(outfit_data, list) and len(outfit_data) > 0:
-                    outfit_data = outfit_data[0]
-                if not isinstance(outfit_data, dict):
-                    raise ValueError(f"Expected dict from single-outfit fallback, got {type(outfit_data)}")
-                outfit_data["_ai_model"] = fallback.model
-                outfit_data["_ai_endpoint"] = fallback.endpoint
-                return await self._materialize_outfit(
-                    outfit_data, user, weather, occasion, source, number_map,
-                    scheduled_date=scheduled_date,
-                )
+            # Multi-outfit parse
+            outfit_list = self._parse_multi_outfit_response(result.content)
 
             first = outfit_list[0]
             first["_ai_model"] = result.model
@@ -865,14 +837,11 @@ class RecommendationService:
 
         except AIRecommendationError:
             raise
-        except (httpx.HTTPStatusError, httpx.RequestError) as e:
-            logger.error(f"AI connectivity error: {e}")
+        except Exception as e:
+            logger.error(f"AI recommendation failed: {e}")
             raise AIRecommendationError(
                 "AI service is not available. Please check your AI endpoint configuration in Settings."
             ) from e
-        except Exception as e:
-            logger.error(f"AI recommendation failed: {e}")
-            raise AIRecommendationError(str(e)) from e
 
 
 class InsufficientWardrobeError(Exception):
