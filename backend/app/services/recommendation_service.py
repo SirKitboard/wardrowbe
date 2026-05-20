@@ -433,25 +433,27 @@ class RecommendationService:
 
         try:
             return json.loads(content.strip())
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as e:
+            logger.debug(f"parse attempt 1 (direct): {e}")
 
         try:
             return json.loads(strip_comments(content.strip()))
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as e:
+            logger.debug(f"parse attempt 2 (strip comments): {e}")
 
         json_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", content)
         if json_match:
             extracted = json_match.group(1)
             try:
                 return json.loads(extracted)
-            except json.JSONDecodeError:
-                pass
+            except json.JSONDecodeError as e:
+                logger.debug(f"parse attempt 3 (code fence): {e}")
             try:
                 return json.loads(strip_comments(extracted))
-            except json.JSONDecodeError:
-                pass
+            except json.JSONDecodeError as e:
+                logger.debug(f"parse attempt 4 (code fence + strip comments): {e}")
+        else:
+            logger.debug("parse attempt 3/4 skipped: no code fence found")
 
         start_idx = content.find("{")
         if start_idx != -1:
@@ -465,12 +467,15 @@ class RecommendationService:
                         json_str = content[start_idx : i + 1]
                         try:
                             return json.loads(json_str)
-                        except json.JSONDecodeError:
-                            pass
+                        except json.JSONDecodeError as e:
+                            logger.debug(f"parse attempt 5 (brace scan): {e}")
                         try:
                             return json.loads(strip_comments(json_str))
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as e:
+                            logger.debug(f"parse attempt 6 (brace scan + strip comments): {e}")
                             break
+        else:
+            logger.debug("parse attempt 5/6 skipped: no '{' found in response")
 
         start_idx = content.find("[")
         if start_idx != -1:
@@ -489,9 +494,13 @@ class RecommendationService:
                                     return result[0]
                                 return {"items": result}
                             return result
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as e:
+                            logger.debug(f"parse attempt 7 (bracket scan): {e}")
                             break
+        else:
+            logger.debug("parse attempt 7 skipped: no '[' found in response")
 
+        logger.warning(f"All parse attempts failed. Full response:\n{content}")
         raise ValueError(f"Could not parse AI response as JSON: {content[:200]}")
 
     def _parse_multi_outfit_response(self, content: str) -> list[dict]:
